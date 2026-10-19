@@ -94,6 +94,13 @@ main { padding-block: 14px 110px; max-width: 720px; margin: 0 auto; }
 .tint1 { background: var(--t1); } .tint2 { background: var(--t2); } .tint3 { background: var(--t3); } .tint4 { background: var(--t4); }
 .badge { position: absolute; left: 8px; top: 8px; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 8px; background: var(--surface); color: var(--muted); }
 .badge.ready { background: var(--ok-soft); color: var(--ok); }
+.badge.hot, .lead.hot { background: var(--accent); color: var(--accent-ink); }
+.ph img { background: var(--line); }
+.thumbs { display: flex; gap: 8px; margin-top: 10px; overflow-x: auto; }
+.th { flex: none; width: 64px; padding: 0; border: 2px solid transparent; border-radius: 12px; background: none; }
+.th .ph { border-radius: 10px; }
+.th[aria-pressed="true"] { border-color: var(--accent); }
+.more { display: block; width: 100%; margin-top: 18px; }
 .card .nm { font-size: 14px; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .card .pr { font-weight: 700; font-size: 15px; }
 .empty { text-align: center; padding: 48px 12px; color: var(--muted); }
@@ -197,7 +204,7 @@ code.snip { display: block; white-space: pre-wrap; word-break: break-all; font-s
 const CONFIG = {
   storeName: "Celina Store",
   tagline: "Xitoydan · ayollar uchun",
-  demo: true,              // haqiqiy tovarlar qo‘yilgach false qiling
+  demo: false,             // true = "namuna katalog" ogohlantirishi chiqadi
   usd: 11963,              // 1 USD, so‘m (MB, 15.10.2026)
   cny: 1803,               // 1 CNY, so‘m (MB, oktyabr 2026)
   cargoUsdPerKg: 5.5,      // kargo tarifi, $/kg
@@ -207,18 +214,22 @@ const CONFIG = {
   prepay: 0.5,             // oldindan to‘lov ulushi
   leadTime: "10–14 kun",
   delivery: { "Toshkent shahri": 20000, _default: 35000 }, // so‘m, taxminiy
-  adminUsername: "celina_admin"  // buyurtma Telegram’dan tashqarida berilsa
+  adminUsername: "celina_store_admin",  // buyurtma Telegram’dan tashqarida berilsa
+  pageSize: 40               // katalogda bir martada ko‘rsatiladigan tovar soni
 };
 
-/* 2) KATEGORIYALAR — standart og‘irlik (g) va ustama koeffitsienti */
+/* 2) KATEGORIYALAR — kalkulyator uchun standart og‘irlik (g) va ustama koeffitsienti */
 const CATEGORIES = [
   { id: "all", name: "Hammasi" },
-  { id: "pijama", name: "Pijama", mult: 2.5, weight: 420, chart: "ayol", icon: "shirt" },
-  { id: "kiyim", name: "Kiyim", mult: 2.5, weight: 380, chart: "ayol", icon: "dress" },
-  { id: "sumka", name: "Sumka", mult: 2.3, weight: 550, icon: "bag" },
+  { id: "pop", name: "Ko‘p so‘ralgan" },
+  { id: "oyoq", name: "Oyoq kiyim", mult: 2.3, weight: 600, chart: "oyoq", icon: "slipper" },
+  { id: "bolalar", name: "Bolalar", mult: 2.5, weight: 300, chart: "bolalar", icon: "shirt" },
+  { id: "pijama", name: "Pijama va ichki kiyim", mult: 2.5, weight: 420, chart: "ayol", icon: "shirt" },
+  { id: "kiyim", name: "Kiyim", mult: 2.5, weight: 450, chart: "ayol", icon: "dress" },
+  { id: "sumka", name: "Sumka va hamyon", mult: 2.3, weight: 550, icon: "bag" },
   { id: "aksessuar", name: "Aksessuar", mult: 3.0, weight: 150, icon: "pouch" },
-  { id: "bolalar", name: "Bolalar", mult: 2.5, weight: 260, chart: "bolalar", icon: "shirt" },
-  { id: "oyoq", name: "Uy oyoq kiyimi", mult: 2.3, weight: 420, chart: "oyoq", icon: "slipper" }
+  { id: "kosmetika", name: "Kosmetika", mult: 2.5, weight: 200, icon: "pouch" },
+  { id: "uy", name: "Uy-ro‘zg‘or", mult: 2.5, weight: 400, icon: "pouch" }
 ];
 
 /* 3) RAZMER JADVALLARI (sm). Tovarga xos jadval bo‘lsa, tovarda "chart" bilan bering. */
@@ -228,22 +239,11 @@ const SIZE_CHARTS = {
   oyoq: { cols: ["Razmer", "Tagcharm, sm"], rows: [["36", 23], ["37", 23.5], ["38", 24], ["39", 24.5], ["40", 25]], note: "Oyoq uzunligini o‘lchab, +0.5 sm qo‘shing." }
 };
 
-/* 4) KATALOG — cny: PDD/1688 narxi (yuan), weight: gramm (bo‘lmasa kategoriya standarti).
-      img: rasm havolasi (bo‘sh bo‘lsa chizma ko‘rinadi). stock: true = Toshkentda bor. */
-const PRODUCTS = [
-  { id: "pj01", cat: "pijama", name: "Atlas pijama to‘plami, uzun yeng", cny: 38, weight: 420, sizes: ["M", "L", "XL", "2XL"], colors: ["Pudra", "Shampan", "Qora"], fabric: "Atlas: poliester 95%, elastan 5%", note: "Bitta katta razmer oling.", tint: 1 },
-  { id: "pj02", cat: "pijama", name: "Paxta pijama, kalta yeng va shim", cny: 29, weight: 380, sizes: ["M", "L", "XL"], colors: ["Moviy", "Pushti"], fabric: "Paxta 95%, elastan 5%", tint: 3, stock: true },
-  { id: "pj03", cat: "pijama", name: "Issiq flanel pijama", cny: 45, weight: 650, sizes: ["M", "L", "XL", "2XL"], colors: ["Kulrang katak", "Bordo katak"], fabric: "Flanel (paxta aralash)", note: "Qishga mos, og‘irroq.", tint: 2 },
-  { id: "kv01", cat: "kiyim", name: "Uzun trikotaj ko‘ylak", cny: 48, weight: 420, sizes: ["S", "M", "L", "XL"], colors: ["Qora", "Kakao"], fabric: "Trikotaj: viskoza 70%, poliester 30%", tint: 4 },
-  { id: "kv02", cat: "kiyim", name: "Shifon gulli ko‘ylak", cny: 52, weight: 330, sizes: ["S", "M", "L", "XL"], colors: ["Oq-gulli", "Ko‘k-gulli"], fabric: "Shifon, astarli", tint: 1 },
-  { id: "kv03", cat: "kiyim", name: "Yumshoq kofta, keng bichim", cny: 35, weight: 360, sizes: ["Free size"], colors: ["Sut rang", "Zaytun"], fabric: "Akril 60%, poliester 40%", note: "Free size: 42–48 razmerga mos.", tint: 3 },
-  { id: "sm01", cat: "sumka", name: "Eko-teri sumka, o‘rta", cny: 42, weight: 550, sizes: [], colors: ["Qora", "Bej", "Jigarrang"], fabric: "Eko-teri, ichki cho‘ntak", note: "O‘lcham: 28 × 20 × 10 sm.", tint: 2 },
-  { id: "sm02", cat: "sumka", name: "Kichik crossbody sumka", cny: 28, weight: 380, sizes: [], colors: ["Qora", "Oq"], fabric: "Eko-teri, uzun bog‘ich", note: "O‘lcham: 20 × 13 × 6 sm.", tint: 4, stock: true },
-  { id: "ak01", cat: "aksessuar", name: "Kosmetichka, 3 bo‘limli", cny: 18, weight: 200, sizes: [], colors: ["Pushti", "Qora"], fabric: "Neylon, suv o‘tkazmaydi", tint: 1 },
-  { id: "ak02", cat: "aksessuar", name: "Soch qisqichlari to‘plami (6 dona)", cny: 9, weight: 90, sizes: [], colors: ["Aralash"], fabric: "Akril", tint: 3 },
-  { id: "bl01", cat: "bolalar", name: "Bolalar paxta pijamasi", cny: 24, weight: 260, sizes: ["90", "100", "110", "120", "130"], colors: ["Ayiqcha", "Quyoncha"], fabric: "Paxta 100%", tint: 2 },
-  { id: "oy01", cat: "oyoq", name: "Uy shippagi, yumshoq", cny: 16, weight: 420, sizes: ["36", "37", "38", "39", "40"], colors: ["Kulrang", "Pushti"], fabric: "Pelyush, rezina tagcharm", tint: 4 }
-];
+/* 4) KATALOG — products.json faylidan yuklanadi (kanal e’lonlaridan yig‘ilgan).
+      Har tovar: id, cat, name, price (so‘m), img (Telegram file_id ro‘yxati),
+      sizes (bo‘lsa), ask=1 (razmer/rangni mijoz yozadi), pop=1 (ko‘p so‘ralgan), d (sana). */
+let PRODUCTS = [];
+const IMG = id => "/api/img?f=" + encodeURIComponent(id);
 
 /* =========================================================
    NARX FORMULASI (True Landed Cost)
@@ -261,7 +261,7 @@ function calc(cny, grams, mult, r = CONFIG) {
   const sale = roundPsy(landed * mult);
   return { goods, cargo, fee, packing: r.packing, buffer: base * r.buffer, landed, sale, profit: sale - landed, margin: (sale - landed) / sale };
 }
-function priceOf(p) { const c = catOf(p.cat); return calc(p.cny, p.weight || c.weight, p.mult || c.mult).sale; }
+function priceOf(p) { if (p.price) return p.price; const c = catOf(p.cat); return calc(p.cny, p.weight || c.weight, p.mult || c.mult).sale; }
 function fmt(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " so‘m"; }
 function esc(s) { return String(s ?? "").replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch])); }
 
@@ -280,7 +280,7 @@ if (TG) { TG.ready(); TG.expand(); syncTgTheme(); TG.onEvent("themeChanged", syn
 function haptic(kind) { try { TG && TG.HapticFeedback.notificationOccurred(kind); } catch (e) {} }
 
 /* ---------- holat ---------- */
-const state = { view: "catalog", cat: "all", q: "", pid: null, sel: { size: null, color: null, qty: 1 }, cart: loadCart(), lastOrder: null, form: {} };
+const state = { view: "catalog", cat: "all", q: "", shown: CONFIG.pageSize, pid: null, sel: { size: null, color: null, qty: 1 }, cart: [], lastOrder: null, form: {}, loading: true, loadErr: false };
 function loadCart() { try { return JSON.parse(localStorage.getItem("celina_cart") || "[]").filter(i => PRODUCTS.some(p => p.id === i.id)); } catch (e) { return []; } }
 function saveCart() { try { localStorage.setItem("celina_cart", JSON.stringify(state.cart)); } catch (e) {} }
 function cartCount() { return state.cart.reduce((s, i) => s + i.qty, 0); }
@@ -300,10 +300,12 @@ const UI = {
   search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>',
   tick: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>'
 };
-function photo(p, extra = "") {
+function photo(p, extra = "", k = 0) {
   const icon = ICONS[catOf(p.cat).icon] || ICONS.pouch;
-  const inner = p.img ? `<img src="${esc(p.img)}" alt="${esc(p.name)}" loading="lazy">` : `<svg viewBox="0 0 100 100" aria-hidden="true">${icon}</svg>`;
-  return `<div class="ph tint${p.tint || 1}">${inner}${extra}</div>`;
+  const src = Array.isArray(p.img) ? p.img[k] : (k ? null : p.img);
+  const url = src ? (/^https?:|^\//.test(src) ? src : IMG(src)) : null;
+  const inner = url ? `<img src="${esc(url)}" alt="${esc(p.name)}" loading="lazy" decoding="async">` : `<svg viewBox="0 0 100 100" aria-hidden="true">${icon}</svg>`;
+  return `<div class="ph tint${p.tint || ((p.id || "").length % 4) + 1}">${inner}${extra}</div>`;
 }
 
 /* ---------- navigatsiya ---------- */
@@ -342,22 +344,27 @@ function render() {
 /* ---------- KATALOG ---------- */
 function viewCatalog(v) {
   const q = state.q.trim().toLowerCase();
-  const list = PRODUCTS.filter(p => (state.cat === "all" || p.cat === state.cat) && (!q || p.name.toLowerCase().includes(q)));
+  const all = PRODUCTS.filter(p => (state.cat === "all" || (state.cat === "pop" ? p.pop : p.cat === state.cat)) && (!q || p.name.toLowerCase().includes(q) || (catOf(p.cat).name || "").toLowerCase().includes(q)));
+  const list = all.slice(0, state.shown);
   v.innerHTML = `
     <div class="search">${UI.search}<input id="q" type="search" placeholder="Qidirish: pijama, sumka…" value="${esc(state.q)}" aria-label="Qidirish"></div>
     <div class="chips" role="group" aria-label="Kategoriyalar">${CATEGORIES.map(c => `<button class="chip" type="button" data-cat="${c.id}" aria-pressed="${state.cat === c.id}">${esc(c.name)}</button>`).join("")}</div>
-    <div class="terms"><span><i></i>Xitoydan ${esc(CONFIG.leadTime)}</span><span><i></i>${Math.round(CONFIG.prepay * 100)}% oldindan to‘lov</span><span><i></i>Narxda kargo bor</span></div>
+    <div class="terms"><span><i></i>Xitoydan ${esc(CONFIG.leadTime)}</span><span><i></i>${Math.round(CONFIG.prepay * 100)}% oldindan to‘lov</span><span><i></i>Butun O‘zbekiston bo‘ylab</span></div>
     ${CONFIG.demo ? `<div class="demo">Namuna katalog: tovarlar va narxlar sinov uchun.</div>` : ""}
     ${list.length ? `<div class="grid">${list.map(p => `
       <button class="card" type="button" data-id="${p.id}">
-        ${photo(p, `<span class="badge ${p.stock ? "ready" : ""}">${p.stock ? "Tayyor" : "Buyurtmaga"}</span>`)}
+        ${photo(p, p.stock ? `<span class="badge ready">Tayyor</span>` : p.pop ? `<span class="badge hot">Ko‘p so‘ralgan</span>` : "")}
         <span class="nm">${esc(p.name)}</span>
         <span class="pr num">${fmt(priceOf(p))}</span>
-      </button>`).join("")}</div>`
+      </button>`).join("")}</div>
+      ${all.length > list.length ? `<button class="ghost more" type="button" id="moreBtn">Yana ko‘rsatish · ${all.length - list.length} ta</button>` : ""}`
+    : state.loading ? `<div class="empty"><b>Katalog yuklanmoqda…</b>Bir necha soniya.</div>`
+    : state.loadErr ? `<div class="empty"><b>Katalog yuklanmadi</b>Internetni tekshirib, ilovani qayta oching.</div>`
     : `<div class="empty"><b>Hech narsa topilmadi</b>Boshqa so‘z bilan qidiring yoki “Hammasi”ni tanlang.</div>`}`;
   const qi = v.querySelector("#q");
-  qi.oninput = () => { state.q = qi.value; const pos = qi.selectionStart; viewCatalog(v); const n = v.querySelector("#q"); n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) {} };
-  v.querySelectorAll("[data-cat]").forEach(b => b.onclick = () => { state.cat = b.dataset.cat; viewCatalog(v); });
+  qi.oninput = () => { state.q = qi.value; state.shown = CONFIG.pageSize; const pos = qi.selectionStart; viewCatalog(v); const n = v.querySelector("#q"); n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) {} };
+  v.querySelectorAll("[data-cat]").forEach(b => b.onclick = () => { state.cat = b.dataset.cat; state.shown = CONFIG.pageSize; viewCatalog(v); });
+  const more = v.querySelector("#moreBtn"); if (more) more.onclick = () => { const y = window.scrollY; state.shown += CONFIG.pageSize; viewCatalog(v); window.scrollTo(0, y); };
   v.querySelectorAll("[data-id]").forEach(b => b.onclick = () => openProduct(b.dataset.id));
   setBar(cartCount() ? `Savat · ${cartCount()} dona · <span class="num">${fmt(cartSubtotal())}</span>` : "", () => go("cart"));
 }
@@ -366,7 +373,7 @@ function viewCatalog(v) {
 function openProduct(id) {
   const p = PRODUCTS.find(x => x.id === id);
   state.pid = id;
-  state.sel = { size: p.sizes && p.sizes.length === 1 ? p.sizes[0] : null, color: p.colors && p.colors.length ? p.colors[0] : null, qty: 1, err: false };
+  state.sel = { size: p.sizes && p.sizes.length === 1 ? p.sizes[0] : null, color: p.colors && p.colors.length ? p.colors[0] : null, qty: 1, err: false, img: 0, ask: "" };
   go("product");
 }
 function chartHtml(p) {
@@ -380,31 +387,38 @@ function chartHtml(p) {
 function viewProduct(v) {
   const p = PRODUCTS.find(x => x.id === state.pid); if (!p) return go("catalog");
   const s = state.sel, price = priceOf(p);
+  const imgs = Array.isArray(p.img) ? p.img : [];
   v.innerHTML = `<div class="pd">
-    ${photo(p)}
+    ${photo(p, "", s.img)}
+    ${imgs.length > 1 ? `<div class="thumbs">${imgs.map((_, k) => `<button type="button" class="th" data-img="${k}" aria-pressed="${s.img === k}" aria-label="Rasm ${k + 1}">${photo(p, "", k)}</button>`).join("")}</div>` : ""}
     <h1>${esc(p.name)}</h1>
     <div class="price num">${fmt(price)}</div>
-    <span class="lead ${p.stock ? "ready" : ""}">${p.stock ? "Toshkentda bor · 1–2 kun" : "Xitoydan buyurtma · " + esc(CONFIG.leadTime)}</span>
+    <span class="lead ${p.stock ? "ready" : ""}">${p.stock ? "Toshkentda bor · 1–2 kun" : "Xitoydan buyurtma · " + esc(CONFIG.leadTime)}</span>${p.pop ? ` <span class="lead hot">Ko‘p so‘ralgan</span>` : ""}
     ${p.colors && p.colors.length ? `<div class="sec"><div class="lbl"><span>Rang</span><span>${esc(s.color || "")}</span></div>
       <div class="opts">${p.colors.map(c => `<button class="opt" type="button" data-color="${esc(c)}" aria-pressed="${s.color === c}">${esc(c)}</button>`).join("")}</div></div>` : ""}
     ${p.sizes && p.sizes.length ? `<div class="sec"><div class="lbl"><span>Razmer</span></div>
       <div class="opts">${p.sizes.map(z => `<button class="opt" type="button" data-size="${esc(z)}" aria-pressed="${s.size === z}">${esc(z)}</button>`).join("")}</div>
       ${s.err ? `<div class="err">Razmerni tanlang.</div>` : ""}</div>` : ""}
+    ${p.ask ? `<div class="sec field ${s.err ? "bad" : ""}"><label for="askIn">Razmer va rang</label><input id="askIn" maxlength="30" value="${esc(s.ask)}" placeholder="Masalan: 38, oq yoki M, pushti">${s.err ? `<div class="err">Razmer va rangni yozing.</div>` : ""}</div>` : ""}
     ${chartHtml(p)}
     ${p.note ? `<div class="sec note">${esc(p.note)}</div>` : ""}
-    <dl class="sec facts">${p.fabric ? `<dt>Mato</dt><dd>${esc(p.fabric)}</dd>` : ""}<dt>To‘lov</dt><dd>${Math.round(CONFIG.prepay * 100)}% oldindan, qolgani yetkazilganda</dd><dt>Kod</dt><dd>${esc(p.id.toUpperCase())}</dd></dl>
+    <dl class="sec facts">${p.fabric ? `<dt>Mato</dt><dd>${esc(p.fabric)}</dd>` : ""}<dt>To‘lov</dt><dd>${Math.round(CONFIG.prepay * 100)}% oldindan, qolgani yetkazilganda</dd><dt>Kod</dt><dd>${esc(p.id.toUpperCase())}</dd>${p.d ? `<dt>E’lon</dt><dd>${esc(p.d.split("-").reverse().join("."))}</dd>` : ""}</dl>
     <div class="sec"><div class="lbl"><span>Soni</span></div>
       <div class="stepper"><button type="button" id="qm" aria-label="Kamaytirish">−</button><span class="num" id="qv">${s.qty}</span><button type="button" id="qp" aria-label="Ko‘paytirish">+</button></div></div>
   </div>`;
   v.querySelectorAll("[data-color]").forEach(b => b.onclick = () => { s.color = b.dataset.color; viewProduct(v); });
   v.querySelectorAll("[data-size]").forEach(b => b.onclick = () => { s.size = b.dataset.size; s.err = false; viewProduct(v); });
+  v.querySelectorAll("[data-img]").forEach(b => b.onclick = () => { s.img = +b.dataset.img; viewProduct(v); });
+  const askIn = v.querySelector("#askIn"); if (askIn) askIn.oninput = () => { s.ask = askIn.value; };
   v.querySelector("#qm").onclick = () => { s.qty = Math.max(1, s.qty - 1); viewProduct(v); };
   v.querySelector("#qp").onclick = () => { s.qty = Math.min(20, s.qty + 1); viewProduct(v); };
   setBar(`Savatga qo‘shish · <span class="num">${fmt(price * s.qty)}</span>`, () => {
     if (p.sizes && p.sizes.length && !s.size) { s.err = true; viewProduct(v); haptic("error"); return; }
-    const key = [p.id, s.size || "", s.color || ""].join("|");
+    if (p.ask && !s.ask.trim()) { s.err = true; viewProduct(v); haptic("error"); return; }
+    const color = p.ask ? s.ask.trim().slice(0, 30) : (s.color || "");
+    const key = [p.id, s.size || "", color].join("|");
     const ex = state.cart.find(i => i.key === key);
-    if (ex) ex.qty = Math.min(20, ex.qty + s.qty); else state.cart.push({ key, id: p.id, size: s.size || "", color: s.color || "", qty: s.qty });
+    if (ex) ex.qty = Math.min(20, ex.qty + s.qty); else state.cart.push({ key, id: p.id, size: s.size || "", color, qty: s.qty });
     saveCart(); haptic("success"); renderTop(); toast("Savatga qo‘shildi"); go("catalog");
   });
 }
@@ -556,7 +570,7 @@ function viewAdmin(v) {
     </div>
     <code class="snip" id="snip">${esc(snippet)}</code>
     <button class="ghost" type="button" id="snipBtn" style="margin-top:10px">Qatorni nusxalash</button>
-    <div class="muted" style="font-size:12.5px;margin-top:8px">Nusxani PRODUCTS ro‘yxatiga qo‘ying. Narx avtomatik hisoblanadi.</div></div>`;
+    <div class="muted" style="font-size:12.5px;margin-top:8px">Nusxani products.json ro‘yxatiga qo‘shing: narx yuan va og‘irlikdan avtomatik hisoblanadi. Tayyor narx qo‘ymoqchi bo‘lsangiz, cny o‘rniga price: 129000 yozing.</div></div>`;
   const map = { "a-cny": "cny", "a-g": "g", "a-mult": "mult", "a-cur": "cur", "a-usd": "usd", "a-rcny": "rcny", "a-cargo": "cargo", "a-name": "name", "a-sizes": "sizes", "a-colors": "colors", "a-fabric": "fabric" };
   Object.entries(map).forEach(([elId, key]) => { const el = v.querySelector("#" + elId); el.onchange = () => { A[key] = el.value.replace(",", key.match(/name|sizes|colors|fabric/) ? "," : "."); viewAdmin(v); }; });
   v.querySelector("#a-cat").onchange = e => { A.cat = e.target.value; const k = catOf(A.cat); A.mult = k.mult; A.g = k.weight; viewAdmin(v); };
@@ -568,4 +582,9 @@ function viewAdmin(v) {
 if (location.hash === "#admin") state.view = "admin";
 window.addEventListener("hashchange", () => { if (location.hash === "#admin") go("admin"); });
 render();
+fetch("products.json", { cache: "no-cache" })
+  .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+  .then(list => { PRODUCTS = Array.isArray(list) ? list : []; state.cart = loadCart(); })
+  .catch(() => { state.loadErr = true; })
+  .finally(() => { state.loading = false; if (state.view === "catalog" || state.view === "cart") render(); });
 </script>
