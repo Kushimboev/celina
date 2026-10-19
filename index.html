@@ -266,7 +266,7 @@ function fmt(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, 
 function esc(s) { return String(s ?? "").replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch])); }
 
 /* ---------- Telegram ---------- */
-const TG = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData ? window.Telegram.WebApp : null;
+const TG = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.platform && window.Telegram.WebApp.platform !== "unknown" ? window.Telegram.WebApp : null;
 function hexOf(token) {
   const v = getComputedStyle(document.documentElement).getPropertyValue(token).trim();
   return /^#[0-9a-f]{6}$/i.test(v) ? v : null;
