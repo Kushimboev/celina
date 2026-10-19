@@ -1,0 +1,571 @@
+<title>Celina Store</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<!--TG-SDK--><script src="https://telegram.org/js/telegram-web-app.js"></script><!--/TG-SDK-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Marcellus&family=Manrope:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one-column boutique shelf — sticky wordmark bar, 2-up product grid, fixed action bar at the thumb */
+:root {
+  --bg: #FAF7F8;
+  --surface: #FFFFFF;
+  --ink: #22181F;
+  --muted: #76666F;
+  --line: #EADFE5;
+  --accent: #7A2E5C;
+  --accent-ink: #FFFFFF;
+  --accent-soft: #F4E7EF;
+  --ok: #2F7A55;
+  --ok-soft: #E3F2EA;
+  --warn: #9A5A12;
+  --warn-soft: #FBEEDD;
+  --bad: #B03A3A;
+  --t1: #F3E4EC; --t2: #EFE8DD; --t3: #E4ECEA; --t4: #E9E6F2;
+  --display: "Marcellus", "Cormorant Garamond", Georgia, serif;
+  --body: "Manrope", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --r: 14px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #161117; --surface: #201922; --ink: #F3EBF1; --muted: #A9979F; --line: #3A2E3B;
+    --accent: #DA92BD; --accent-ink: #1C1018; --accent-soft: #3A2333;
+    --ok: #74C99F; --ok-soft: #1E3329; --warn: #E6A75E; --warn-soft: #3A2B19; --bad: #EE8A8A;
+    --t1: #33232E; --t2: #302A22; --t3: #22302D; --t4: #2A2735;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #161117; --surface: #201922; --ink: #F3EBF1; --muted: #A9979F; --line: #3A2E3B;
+  --accent: #DA92BD; --accent-ink: #1C1018; --accent-soft: #3A2333;
+  --ok: #74C99F; --ok-soft: #1E3329; --warn: #E6A75E; --warn-soft: #3A2B19; --bad: #EE8A8A;
+  --t1: #33232E; --t2: #302A22; --t3: #22302D; --t4: #2A2735;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.45;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  -webkit-tap-highlight-color: transparent;
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.num { font-variant-numeric: tabular-nums; }
+
+/* top bar */
+.top {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  display: flex; align-items: center; gap: 12px; padding-block: 12px 10px;
+  background: var(--bg); border-bottom: 1px solid var(--line);
+  margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px))) calc(-1 * max(16px, env(safe-area-inset-right, 0px)));
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.back { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); }
+.back svg { width: 18px; height: 18px; }
+.brand { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.brand b { font-family: var(--display); font-weight: 400; font-size: 24px; letter-spacing: .04em; line-height: 1; }
+.brand small { color: var(--muted); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; margin-top: 4px; }
+.cartbtn { position: relative; display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%; background: var(--accent-soft); border: 0; color: var(--accent); }
+.cartbtn svg { width: 21px; height: 21px; }
+.cartbtn .count { position: absolute; top: -2px; right: -2px; min-width: 19px; height: 19px; padding: 0 5px; border-radius: 10px; background: var(--accent); color: var(--accent-ink); font-size: 11px; font-weight: 700; display: grid; place-items: center; }
+
+main { padding-block: 14px 110px; max-width: 720px; margin: 0 auto; }
+
+/* catalog */
+.search { position: relative; }
+.search input { width: 100%; height: 44px; border-radius: 22px; border: 1px solid var(--line); background: var(--surface); padding: 0 16px 0 42px; }
+.search svg { position: absolute; left: 14px; top: 13px; width: 18px; height: 18px; color: var(--muted); }
+.chips { display: flex; gap: 8px; overflow-x: auto; padding-block: 12px 4px; scrollbar-width: none; margin-inline: -2px; padding-inline: 2px; }
+.chips::-webkit-scrollbar { display: none; }
+.chip { flex: none; height: 34px; padding: 0 14px; border-radius: 17px; border: 1px solid var(--line); background: var(--surface); font-size: 14px; font-weight: 500; white-space: nowrap; }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.terms { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-block: 10px 14px; font-size: 12.5px; color: var(--muted); }
+.terms span { display: inline-flex; align-items: center; gap: 6px; }
+.terms i { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); display: inline-block; }
+.demo { font-size: 12.5px; padding: 8px 12px; border-radius: 10px; background: var(--warn-soft); color: var(--warn); margin-bottom: 12px; }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 12px; }
+@media (min-width: 560px) { .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.card { display: flex; flex-direction: column; gap: 8px; text-align: left; background: none; border: 0; padding: 0; min-width: 0; }
+.ph { position: relative; width: 100%; aspect-ratio: 4 / 5; border-radius: var(--r); overflow: hidden; display: grid; place-items: center; }
+.ph img { width: 100%; height: 100%; object-fit: cover; }
+.ph svg { width: 56%; height: 56%; color: var(--ink); opacity: .55; }
+.tint1 { background: var(--t1); } .tint2 { background: var(--t2); } .tint3 { background: var(--t3); } .tint4 { background: var(--t4); }
+.badge { position: absolute; left: 8px; top: 8px; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 8px; background: var(--surface); color: var(--muted); }
+.badge.ready { background: var(--ok-soft); color: var(--ok); }
+.card .nm { font-size: 14px; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.card .pr { font-weight: 700; font-size: 15px; }
+.empty { text-align: center; padding: 48px 12px; color: var(--muted); }
+.empty b { display: block; font-family: var(--display); font-weight: 400; font-size: 22px; color: var(--ink); margin-bottom: 6px; }
+
+/* product */
+.pd .ph { aspect-ratio: 1 / 1; max-height: 52vh; }
+.pd h1 { font-family: var(--display); font-weight: 400; font-size: 26px; line-height: 1.15; margin: 16px 0 6px; text-wrap: balance; }
+.pd .price { font-size: 22px; font-weight: 700; }
+.lead { display: inline-flex; margin-top: 8px; font-size: 12.5px; font-weight: 600; padding: 4px 10px; border-radius: 8px; background: var(--accent-soft); color: var(--accent); }
+.lead.ready { background: var(--ok-soft); color: var(--ok); }
+.sec { margin-top: 20px; }
+.lbl { font-size: 11.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; display: flex; justify-content: space-between; gap: 8px; }
+.opts { display: flex; flex-wrap: wrap; gap: 8px; }
+.opt { min-width: 48px; height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); font-weight: 600; }
+.opt[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.err { color: var(--bad); font-size: 13px; margin-top: 6px; }
+.note { font-size: 13.5px; padding: 10px 12px; border-left: 3px solid var(--accent); background: var(--surface); border-radius: 0 10px 10px 0; }
+.facts { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 14px; }
+.facts dt { color: var(--muted); } .facts dd { margin: 0; }
+details.chart { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+details.chart summary { padding: 12px 14px; font-weight: 600; cursor: pointer; }
+.tblwrap { overflow-x: auto; padding: 0 14px 12px; }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { font-size: 11.5px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+.chartnote { font-size: 12.5px; color: var(--muted); padding: 0 14px 12px; }
+.stepper { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.stepper button { width: 38px; height: 38px; background: none; border: 0; font-size: 18px; }
+.stepper span { min-width: 28px; text-align: center; font-weight: 700; }
+
+/* cart */
+.line { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 12px; padding-block: 14px; border-bottom: 1px solid var(--line); }
+.line .ph { width: 72px; aspect-ratio: 4/5; border-radius: 10px; }
+.line .ph svg { width: 60%; height: 60%; }
+.line .meta { font-size: 13px; color: var(--muted); }
+.line .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+.line .stepper button { width: 32px; height: 32px; }
+.rm { background: none; border: 0; color: var(--muted); font-size: 13px; text-decoration: underline; padding: 4px 0; }
+.sum { margin-top: 16px; display: grid; gap: 8px; font-size: 14.5px; }
+.sum div { display: flex; justify-content: space-between; gap: 10px; }
+.sum .tot { font-weight: 700; font-size: 17px; padding-top: 10px; border-top: 1px solid var(--line); }
+.sum .pre { color: var(--accent); font-weight: 700; }
+.muted { color: var(--muted); }
+h2.vt { font-family: var(--display); font-weight: 400; font-size: 26px; margin: 4px 0 6px; }
+
+/* form */
+.form { display: grid; gap: 14px; margin-top: 8px; }
+.field label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+.field input, .field select, .field textarea { width: 100%; min-height: 46px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); padding: 10px 14px; }
+.field textarea { min-height: 72px; resize: vertical; }
+.field.bad input, .field.bad select { border-color: var(--bad); }
+.radios { display: flex; flex-wrap: wrap; gap: 8px; }
+.radios label { display: inline-flex; align-items: center; gap: 8px; height: 42px; padding: 0 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); font-weight: 600; font-size: 14px; margin: 0; }
+.radios input { accent-color: var(--accent); width: auto; min-height: 0; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px; }
+
+/* done */
+.done { text-align: center; padding-top: 20px; }
+.done .tick { width: 64px; height: 64px; border-radius: 50%; background: var(--ok-soft); color: var(--ok); display: grid; place-items: center; margin: 0 auto 12px; }
+.done .tick svg { width: 30px; height: 30px; }
+pre.order { text-align: left; white-space: pre-wrap; word-break: break-word; font-family: var(--body); font-size: 13.5px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-top: 14px; }
+.ghost { height: 42px; padding: 0 16px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); font-weight: 600; }
+
+/* admin */
+.calc { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.calc .field.wide { grid-column: 1 / -1; }
+.big { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+.big b { font-family: var(--display); font-weight: 400; font-size: 34px; color: var(--accent); }
+.pill { font-size: 12.5px; font-weight: 700; padding: 4px 10px; border-radius: 8px; }
+.pill.good { background: var(--ok-soft); color: var(--ok); }
+.pill.low { background: var(--warn-soft); color: var(--warn); }
+.pill.loss { background: var(--bad); color: var(--surface); }
+code.snip { display: block; white-space: pre-wrap; word-break: break-all; font-size: 12.5px; background: var(--bg); border: 1px dashed var(--line); border-radius: 10px; padding: 10px; margin-top: 10px; }
+
+/* bottom bar */
+.bar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 6;
+  padding-top: 10px; padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  background: var(--bg); border-top: 1px solid var(--line);
+}
+.bar button { display: flex; justify-content: center; align-items: center; gap: 10px; width: 100%; max-width: 720px; margin: 0 auto; height: 52px; border-radius: 14px; border: 0; background: var(--accent); color: var(--accent-ink); font-weight: 700; font-size: 16px; }
+.bar button:disabled { opacity: .5; }
+.toast { position: fixed; left: 50%; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 12px; font-size: 14px; font-weight: 600; z-index: 9; max-width: calc(100% - 32px); text-align: center; }
+@media (prefers-reduced-motion: no-preference) {
+  .view-in { animation: rise .22s ease-out; }
+  @keyframes rise { from { opacity: .4; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+}
+</style>
+
+<header class="top" id="top"></header>
+<main id="view"></main>
+<div class="bar" id="bar" hidden><button id="barBtn" type="button"></button></div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+/* =========================================================
+   1) SOZLAMALAR — kurs, kargo, yetkazish. Shu yerni o‘zgartiring.
+   ========================================================= */
+const CONFIG = {
+  storeName: "Celina Store",
+  tagline: "Xitoydan · ayollar uchun",
+  demo: true,              // haqiqiy tovarlar qo‘yilgach false qiling
+  usd: 11963,              // 1 USD, so‘m (MB, 15.10.2026)
+  cny: 1803,               // 1 CNY, so‘m (MB, oktyabr 2026)
+  cargoUsdPerKg: 5.5,      // kargo tarifi, $/kg
+  agentFee: 0.08,          // agent/karta komissiyasi (tovar narxidan)
+  packing: 2000,           // qadoqlash, so‘m/dona
+  buffer: 0.07,            // brak/deadstock buferi
+  prepay: 0.5,             // oldindan to‘lov ulushi
+  leadTime: "10–14 kun",
+  delivery: { "Toshkent shahri": 20000, _default: 35000 }, // so‘m, taxminiy
+  adminUsername: "celina_admin"  // buyurtma Telegram’dan tashqarida berilsa
+};
+
+/* 2) KATEGORIYALAR — standart og‘irlik (g) va ustama koeffitsienti */
+const CATEGORIES = [
+  { id: "all", name: "Hammasi" },
+  { id: "pijama", name: "Pijama", mult: 2.5, weight: 420, chart: "ayol", icon: "shirt" },
+  { id: "kiyim", name: "Kiyim", mult: 2.5, weight: 380, chart: "ayol", icon: "dress" },
+  { id: "sumka", name: "Sumka", mult: 2.3, weight: 550, icon: "bag" },
+  { id: "aksessuar", name: "Aksessuar", mult: 3.0, weight: 150, icon: "pouch" },
+  { id: "bolalar", name: "Bolalar", mult: 2.5, weight: 260, chart: "bolalar", icon: "shirt" },
+  { id: "oyoq", name: "Uy oyoq kiyimi", mult: 2.3, weight: 420, chart: "oyoq", icon: "slipper" }
+];
+
+/* 3) RAZMER JADVALLARI (sm). Tovarga xos jadval bo‘lsa, tovarda "chart" bilan bering. */
+const SIZE_CHARTS = {
+  ayol: { cols: ["Razmer", "Ko‘krak", "Bel", "Son"], rows: [["S", 84, 66, 90], ["M", 88, 70, 94], ["L", 92, 74, 98], ["XL", 96, 78, 102], ["2XL", 100, 82, 106]], note: "Taxminiy jadval. Xitoy razmerlari odatda bitta kichik chiqadi." },
+  bolalar: { cols: ["Razmer", "Bo‘y, sm", "Yosh"], rows: [["90", 90, "1–2"], ["100", 100, "2–3"], ["110", 110, "3–4"], ["120", 120, "5–6"], ["130", 130, "7–8"]], note: "Bolaning bo‘yiga qarab tanlang." },
+  oyoq: { cols: ["Razmer", "Tagcharm, sm"], rows: [["36", 23], ["37", 23.5], ["38", 24], ["39", 24.5], ["40", 25]], note: "Oyoq uzunligini o‘lchab, +0.5 sm qo‘shing." }
+};
+
+/* 4) KATALOG — cny: PDD/1688 narxi (yuan), weight: gramm (bo‘lmasa kategoriya standarti).
+      img: rasm havolasi (bo‘sh bo‘lsa chizma ko‘rinadi). stock: true = Toshkentda bor. */
+const PRODUCTS = [
+  { id: "pj01", cat: "pijama", name: "Atlas pijama to‘plami, uzun yeng", cny: 38, weight: 420, sizes: ["M", "L", "XL", "2XL"], colors: ["Pudra", "Shampan", "Qora"], fabric: "Atlas: poliester 95%, elastan 5%", note: "Bitta katta razmer oling.", tint: 1 },
+  { id: "pj02", cat: "pijama", name: "Paxta pijama, kalta yeng va shim", cny: 29, weight: 380, sizes: ["M", "L", "XL"], colors: ["Moviy", "Pushti"], fabric: "Paxta 95%, elastan 5%", tint: 3, stock: true },
+  { id: "pj03", cat: "pijama", name: "Issiq flanel pijama", cny: 45, weight: 650, sizes: ["M", "L", "XL", "2XL"], colors: ["Kulrang katak", "Bordo katak"], fabric: "Flanel (paxta aralash)", note: "Qishga mos, og‘irroq.", tint: 2 },
+  { id: "kv01", cat: "kiyim", name: "Uzun trikotaj ko‘ylak", cny: 48, weight: 420, sizes: ["S", "M", "L", "XL"], colors: ["Qora", "Kakao"], fabric: "Trikotaj: viskoza 70%, poliester 30%", tint: 4 },
+  { id: "kv02", cat: "kiyim", name: "Shifon gulli ko‘ylak", cny: 52, weight: 330, sizes: ["S", "M", "L", "XL"], colors: ["Oq-gulli", "Ko‘k-gulli"], fabric: "Shifon, astarli", tint: 1 },
+  { id: "kv03", cat: "kiyim", name: "Yumshoq kofta, keng bichim", cny: 35, weight: 360, sizes: ["Free size"], colors: ["Sut rang", "Zaytun"], fabric: "Akril 60%, poliester 40%", note: "Free size: 42–48 razmerga mos.", tint: 3 },
+  { id: "sm01", cat: "sumka", name: "Eko-teri sumka, o‘rta", cny: 42, weight: 550, sizes: [], colors: ["Qora", "Bej", "Jigarrang"], fabric: "Eko-teri, ichki cho‘ntak", note: "O‘lcham: 28 × 20 × 10 sm.", tint: 2 },
+  { id: "sm02", cat: "sumka", name: "Kichik crossbody sumka", cny: 28, weight: 380, sizes: [], colors: ["Qora", "Oq"], fabric: "Eko-teri, uzun bog‘ich", note: "O‘lcham: 20 × 13 × 6 sm.", tint: 4, stock: true },
+  { id: "ak01", cat: "aksessuar", name: "Kosmetichka, 3 bo‘limli", cny: 18, weight: 200, sizes: [], colors: ["Pushti", "Qora"], fabric: "Neylon, suv o‘tkazmaydi", tint: 1 },
+  { id: "ak02", cat: "aksessuar", name: "Soch qisqichlari to‘plami (6 dona)", cny: 9, weight: 90, sizes: [], colors: ["Aralash"], fabric: "Akril", tint: 3 },
+  { id: "bl01", cat: "bolalar", name: "Bolalar paxta pijamasi", cny: 24, weight: 260, sizes: ["90", "100", "110", "120", "130"], colors: ["Ayiqcha", "Quyoncha"], fabric: "Paxta 100%", tint: 2 },
+  { id: "oy01", cat: "oyoq", name: "Uy shippagi, yumshoq", cny: 16, weight: 420, sizes: ["36", "37", "38", "39", "40"], colors: ["Kulrang", "Pushti"], fabric: "Pelyush, rezina tagcharm", tint: 4 }
+];
+
+/* =========================================================
+   NARX FORMULASI (True Landed Cost)
+   landed = (tovar + kargo + komissiya + qadoqlash) × (1 + bufer)
+   sotuv  = landed × koeffitsient → ...9 000 ga yaxlitlanadi
+   ========================================================= */
+function catOf(id) { return CATEGORIES.find(c => c.id === id) || {}; }
+function roundPsy(x) { let r = Math.ceil(x / 10000) * 10000 - 1000; if (r < x) r += 10000; return r; }
+function calc(cny, grams, mult, r = CONFIG) {
+  const goods = cny * r.cny;
+  const cargo = grams / 1000 * r.cargoUsdPerKg * r.usd;
+  const fee = goods * r.agentFee;
+  const base = goods + cargo + fee + r.packing;
+  const landed = base * (1 + r.buffer);
+  const sale = roundPsy(landed * mult);
+  return { goods, cargo, fee, packing: r.packing, buffer: base * r.buffer, landed, sale, profit: sale - landed, margin: (sale - landed) / sale };
+}
+function priceOf(p) { const c = catOf(p.cat); return calc(p.cny, p.weight || c.weight, p.mult || c.mult).sale; }
+function fmt(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " so‘m"; }
+function esc(s) { return String(s ?? "").replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch])); }
+
+/* ---------- Telegram ---------- */
+const TG = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData ? window.Telegram.WebApp : null;
+function hexOf(token) {
+  const v = getComputedStyle(document.documentElement).getPropertyValue(token).trim();
+  return /^#[0-9a-f]{6}$/i.test(v) ? v : null;
+}
+function syncTgTheme() {
+  if (!TG) return;
+  document.documentElement.dataset.theme = TG.colorScheme === "dark" ? "dark" : "light";
+  try { const bg = hexOf("--bg"); if (bg) { TG.setHeaderColor(bg); TG.setBackgroundColor(bg); TG.setBottomBarColor && TG.setBottomBarColor(bg); } } catch (e) {}
+}
+if (TG) { TG.ready(); TG.expand(); syncTgTheme(); TG.onEvent("themeChanged", syncTgTheme); TG.BackButton.onClick(() => goBack()); }
+function haptic(kind) { try { TG && TG.HapticFeedback.notificationOccurred(kind); } catch (e) {} }
+
+/* ---------- holat ---------- */
+const state = { view: "catalog", cat: "all", q: "", pid: null, sel: { size: null, color: null, qty: 1 }, cart: loadCart(), lastOrder: null, form: {} };
+function loadCart() { try { return JSON.parse(localStorage.getItem("celina_cart") || "[]").filter(i => PRODUCTS.some(p => p.id === i.id)); } catch (e) { return []; } }
+function saveCart() { try { localStorage.setItem("celina_cart", JSON.stringify(state.cart)); } catch (e) {} }
+function cartCount() { return state.cart.reduce((s, i) => s + i.qty, 0); }
+function cartSubtotal() { return state.cart.reduce((s, i) => { const p = PRODUCTS.find(x => x.id === i.id); return s + (p ? priceOf(p) * i.qty : 0); }, 0); }
+
+/* ---------- ikonlar ---------- */
+const ICONS = {
+  shirt: '<path d="M35 20 L50 28 L65 20 L83 33 L74 46 L67 41 L67 82 L33 82 L33 41 L26 46 L17 33 Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/><path d="M50 28 V82" stroke="currentColor" stroke-width="1.6"/><circle cx="54" cy="42" r="1.8" fill="currentColor"/><circle cx="54" cy="54" r="1.8" fill="currentColor"/><circle cx="54" cy="66" r="1.8" fill="currentColor"/>',
+  dress: '<path d="M41 16 H59 L61 33 L74 84 H26 L39 33 Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/><path d="M39 36 H61" stroke="currentColor" stroke-width="1.8"/><path d="M45 16 C45 22 55 22 55 16" fill="none" stroke="currentColor" stroke-width="1.6"/>',
+  bag: '<path d="M22 40 H78 L73 82 H27 Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/><path d="M37 40 C37 22 63 22 63 40" fill="none" stroke="currentColor" stroke-width="2.4"/><rect x="45" y="50" width="10" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/>',
+  pouch: '<path d="M20 38 H80 V74 Q80 80 74 80 H26 Q20 80 20 74 Z" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M20 45 H80" stroke="currentColor" stroke-width="1.6" stroke-dasharray="3 3"/><path d="M66 45 V54" stroke="currentColor" stroke-width="2"/><circle cx="66" cy="57" r="3" fill="none" stroke="currentColor" stroke-width="1.6"/>',
+  slipper: '<path d="M16 62 C16 46 36 40 52 47 L80 58 C88 62 86 74 77 74 H24 C19 74 16 69 16 62 Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/><path d="M36 45 C40 54 52 58 60 52" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M18 68 H84" stroke="currentColor" stroke-width="1.4"/>'
+};
+const UI = {
+  bag: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1 12H6L5 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>',
+  back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
+  search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>',
+  tick: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>'
+};
+function photo(p, extra = "") {
+  const icon = ICONS[catOf(p.cat).icon] || ICONS.pouch;
+  const inner = p.img ? `<img src="${esc(p.img)}" alt="${esc(p.name)}" loading="lazy">` : `<svg viewBox="0 0 100 100" aria-hidden="true">${icon}</svg>`;
+  return `<div class="ph tint${p.tint || 1}">${inner}${extra}</div>`;
+}
+
+/* ---------- navigatsiya ---------- */
+const PARENT = { product: "catalog", cart: "catalog", checkout: "cart", done: "catalog", admin: "catalog" };
+function go(view) {
+  state.view = view;
+  if (view !== "admin" && location.hash === "#admin") history.replaceState(null, "", location.pathname + location.search);
+  render(); window.scrollTo(0, 0);
+}
+function goBack() { go(PARENT[state.view] || "catalog"); }
+function toast(msg) { const t = document.getElementById("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(() => t.hidden = true, 1800); }
+
+function renderTop() {
+  const sub = state.view === "catalog";
+  const titles = { product: "Tovar", cart: "Savat", checkout: "Rasmiylashtirish", done: "Buyurtma", admin: "Narx kalkulyatori" };
+  document.getElementById("top").innerHTML = `
+    ${sub ? "" : `<button class="back" type="button" id="backBtn" aria-label="Orqaga">${UI.back}</button>`}
+    <div class="brand">${sub ? `<b>${esc(CONFIG.storeName)}</b><small>${esc(CONFIG.tagline)}</small>` : `<b style="font-size:20px">${titles[state.view]}</b><small>${esc(CONFIG.storeName)}</small>`}</div>
+    ${state.view === "admin" ? "" : `<button class="cartbtn" type="button" id="cartBtn" aria-label="Savat, ${cartCount()} dona">${UI.bag}${cartCount() ? `<span class="count num">${cartCount()}</span>` : ""}</button>`}`;
+  const b = document.getElementById("backBtn"); if (b) b.onclick = goBack;
+  const c = document.getElementById("cartBtn"); if (c) c.onclick = () => go("cart");
+  if (TG) { sub ? TG.BackButton.hide() : TG.BackButton.show(); }
+}
+function setBar(label, fn, disabled = false) {
+  const bar = document.getElementById("bar"), btn = document.getElementById("barBtn");
+  if (!label) { bar.hidden = true; return; }
+  bar.hidden = false; btn.innerHTML = label; btn.disabled = disabled; btn.onclick = fn;
+}
+function render() {
+  renderTop();
+  const v = document.getElementById("view");
+  v.className = "view-in"; void v.offsetWidth;
+  ({ catalog: viewCatalog, product: viewProduct, cart: viewCart, checkout: viewCheckout, done: viewDone, admin: viewAdmin })[state.view](v);
+}
+
+/* ---------- KATALOG ---------- */
+function viewCatalog(v) {
+  const q = state.q.trim().toLowerCase();
+  const list = PRODUCTS.filter(p => (state.cat === "all" || p.cat === state.cat) && (!q || p.name.toLowerCase().includes(q)));
+  v.innerHTML = `
+    <div class="search">${UI.search}<input id="q" type="search" placeholder="Qidirish: pijama, sumka…" value="${esc(state.q)}" aria-label="Qidirish"></div>
+    <div class="chips" role="group" aria-label="Kategoriyalar">${CATEGORIES.map(c => `<button class="chip" type="button" data-cat="${c.id}" aria-pressed="${state.cat === c.id}">${esc(c.name)}</button>`).join("")}</div>
+    <div class="terms"><span><i></i>Xitoydan ${esc(CONFIG.leadTime)}</span><span><i></i>${Math.round(CONFIG.prepay * 100)}% oldindan to‘lov</span><span><i></i>Narxda kargo bor</span></div>
+    ${CONFIG.demo ? `<div class="demo">Namuna katalog: tovarlar va narxlar sinov uchun.</div>` : ""}
+    ${list.length ? `<div class="grid">${list.map(p => `
+      <button class="card" type="button" data-id="${p.id}">
+        ${photo(p, `<span class="badge ${p.stock ? "ready" : ""}">${p.stock ? "Tayyor" : "Buyurtmaga"}</span>`)}
+        <span class="nm">${esc(p.name)}</span>
+        <span class="pr num">${fmt(priceOf(p))}</span>
+      </button>`).join("")}</div>`
+    : `<div class="empty"><b>Hech narsa topilmadi</b>Boshqa so‘z bilan qidiring yoki “Hammasi”ni tanlang.</div>`}`;
+  const qi = v.querySelector("#q");
+  qi.oninput = () => { state.q = qi.value; const pos = qi.selectionStart; viewCatalog(v); const n = v.querySelector("#q"); n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) {} };
+  v.querySelectorAll("[data-cat]").forEach(b => b.onclick = () => { state.cat = b.dataset.cat; viewCatalog(v); });
+  v.querySelectorAll("[data-id]").forEach(b => b.onclick = () => openProduct(b.dataset.id));
+  setBar(cartCount() ? `Savat · ${cartCount()} dona · <span class="num">${fmt(cartSubtotal())}</span>` : "", () => go("cart"));
+}
+
+/* ---------- TOVAR ---------- */
+function openProduct(id) {
+  const p = PRODUCTS.find(x => x.id === id);
+  state.pid = id;
+  state.sel = { size: p.sizes && p.sizes.length === 1 ? p.sizes[0] : null, color: p.colors && p.colors.length ? p.colors[0] : null, qty: 1, err: false };
+  go("product");
+}
+function chartHtml(p) {
+  const ch = p.chart || SIZE_CHARTS[catOf(p.cat).chart];
+  if (!ch) return "";
+  return `<details class="chart sec"><summary>Razmer jadvali (sm)</summary>
+    <div class="tblwrap"><table><thead><tr>${ch.cols.map(c => `<th>${esc(c)}</th>`).join("")}</tr></thead>
+    <tbody>${ch.rows.map(r => `<tr>${r.map(c => `<td>${esc(c)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
+    ${ch.note ? `<div class="chartnote">${esc(ch.note)}</div>` : ""}</details>`;
+}
+function viewProduct(v) {
+  const p = PRODUCTS.find(x => x.id === state.pid); if (!p) return go("catalog");
+  const s = state.sel, price = priceOf(p);
+  v.innerHTML = `<div class="pd">
+    ${photo(p)}
+    <h1>${esc(p.name)}</h1>
+    <div class="price num">${fmt(price)}</div>
+    <span class="lead ${p.stock ? "ready" : ""}">${p.stock ? "Toshkentda bor · 1–2 kun" : "Xitoydan buyurtma · " + esc(CONFIG.leadTime)}</span>
+    ${p.colors && p.colors.length ? `<div class="sec"><div class="lbl"><span>Rang</span><span>${esc(s.color || "")}</span></div>
+      <div class="opts">${p.colors.map(c => `<button class="opt" type="button" data-color="${esc(c)}" aria-pressed="${s.color === c}">${esc(c)}</button>`).join("")}</div></div>` : ""}
+    ${p.sizes && p.sizes.length ? `<div class="sec"><div class="lbl"><span>Razmer</span></div>
+      <div class="opts">${p.sizes.map(z => `<button class="opt" type="button" data-size="${esc(z)}" aria-pressed="${s.size === z}">${esc(z)}</button>`).join("")}</div>
+      ${s.err ? `<div class="err">Razmerni tanlang.</div>` : ""}</div>` : ""}
+    ${chartHtml(p)}
+    ${p.note ? `<div class="sec note">${esc(p.note)}</div>` : ""}
+    <dl class="sec facts">${p.fabric ? `<dt>Mato</dt><dd>${esc(p.fabric)}</dd>` : ""}<dt>To‘lov</dt><dd>${Math.round(CONFIG.prepay * 100)}% oldindan, qolgani yetkazilganda</dd><dt>Kod</dt><dd>${esc(p.id.toUpperCase())}</dd></dl>
+    <div class="sec"><div class="lbl"><span>Soni</span></div>
+      <div class="stepper"><button type="button" id="qm" aria-label="Kamaytirish">−</button><span class="num" id="qv">${s.qty}</span><button type="button" id="qp" aria-label="Ko‘paytirish">+</button></div></div>
+  </div>`;
+  v.querySelectorAll("[data-color]").forEach(b => b.onclick = () => { s.color = b.dataset.color; viewProduct(v); });
+  v.querySelectorAll("[data-size]").forEach(b => b.onclick = () => { s.size = b.dataset.size; s.err = false; viewProduct(v); });
+  v.querySelector("#qm").onclick = () => { s.qty = Math.max(1, s.qty - 1); viewProduct(v); };
+  v.querySelector("#qp").onclick = () => { s.qty = Math.min(20, s.qty + 1); viewProduct(v); };
+  setBar(`Savatga qo‘shish · <span class="num">${fmt(price * s.qty)}</span>`, () => {
+    if (p.sizes && p.sizes.length && !s.size) { s.err = true; viewProduct(v); haptic("error"); return; }
+    const key = [p.id, s.size || "", s.color || ""].join("|");
+    const ex = state.cart.find(i => i.key === key);
+    if (ex) ex.qty = Math.min(20, ex.qty + s.qty); else state.cart.push({ key, id: p.id, size: s.size || "", color: s.color || "", qty: s.qty });
+    saveCart(); haptic("success"); renderTop(); toast("Savatga qo‘shildi"); go("catalog");
+  });
+}
+
+/* ---------- SAVAT ---------- */
+function viewCart(v) {
+  if (!state.cart.length) {
+    v.innerHTML = `<div class="empty"><b>Savat bo‘sh</b>Katalogdan tovar tanlang.</div>`;
+    setBar("Katalogga qaytish", () => go("catalog")); return;
+  }
+  const sub = cartSubtotal();
+  v.innerHTML = `<h2 class="vt">Savat</h2><div class="muted">${cartCount()} dona tovar</div>
+    ${state.cart.map((i, k) => { const p = PRODUCTS.find(x => x.id === i.id); return `
+      <div class="line">${photo(p)}<div style="min-width:0">
+        <div>${esc(p.name)}</div>
+        <div class="meta">${[i.size && "Razmer " + i.size, i.color].filter(Boolean).map(esc).join(" · ")}</div>
+        <div class="row"><div class="stepper"><button type="button" data-dec="${k}" aria-label="Kamaytirish">−</button><span class="num">${i.qty}</span><button type="button" data-inc="${k}" aria-label="Ko‘paytirish">+</button></div>
+        <b class="num">${fmt(priceOf(p) * i.qty)}</b></div>
+        <button class="rm" type="button" data-rm="${k}">Olib tashlash</button></div></div>`; }).join("")}
+    <div class="sum">
+      <div><span>Tovarlar</span><span class="num">${fmt(sub)}</span></div>
+      <div class="muted"><span>Yetkazish</span><span>keyingi qadamda</span></div>
+      <div class="tot"><span>Jami (yetkazishsiz)</span><span class="num">${fmt(sub)}</span></div>
+    </div>`;
+  v.querySelectorAll("[data-inc]").forEach(b => b.onclick = () => { const i = state.cart[b.dataset.inc]; i.qty = Math.min(20, i.qty + 1); saveCart(); render(); });
+  v.querySelectorAll("[data-dec]").forEach(b => b.onclick = () => { const i = state.cart[b.dataset.dec]; i.qty = Math.max(1, i.qty - 1); saveCart(); render(); });
+  v.querySelectorAll("[data-rm]").forEach(b => b.onclick = () => { state.cart.splice(+b.dataset.rm, 1); saveCart(); render(); });
+  setBar("Rasmiylashtirish", () => go("checkout"));
+}
+
+/* ---------- RASMIYLASHTIRISH ---------- */
+const REGIONS = ["Toshkent shahri", "Toshkent viloyati", "Andijon", "Buxoro", "Farg‘ona", "Jizzax", "Xorazm", "Namangan", "Navoiy", "Qashqadaryo", "Qoraqalpog‘iston", "Samarqand", "Sirdaryo", "Surxondaryo"];
+function deliveryFee(region) { return region ? (CONFIG.delivery[region] ?? CONFIG.delivery._default) : 0; }
+function viewCheckout(v) {
+  if (!state.cart.length) return go("cart");
+  const f = state.form;
+  if (!f.name && TG && TG.initDataUnsafe && TG.initDataUnsafe.user) f.name = [TG.initDataUnsafe.user.first_name, TG.initDataUnsafe.user.last_name].filter(Boolean).join(" ");
+  const sub = cartSubtotal(), del = deliveryFee(f.region), tot = sub + del, pre = Math.round(tot * CONFIG.prepay / 1000) * 1000;
+  const bad = f.bad || {};
+  v.innerHTML = `<h2 class="vt">Ma’lumotlar</h2>
+    <form class="form" id="co" novalidate>
+      <div class="field ${bad.name ? "bad" : ""}"><label for="f-name">Ism</label><input id="f-name" autocomplete="name" value="${esc(f.name || "")}" placeholder="Masalan: Dilnoza"></div>
+      <div class="field ${bad.phone ? "bad" : ""}"><label for="f-phone">Telefon</label><input id="f-phone" type="tel" inputmode="tel" autocomplete="tel" value="${esc(f.phone || "+998 ")}" placeholder="+998 90 123 45 67">${bad.phone ? `<div class="err">Raqamni +998 XX XXX XX XX ko‘rinishida yozing.</div>` : ""}</div>
+      <div class="field ${bad.region ? "bad" : ""}"><label for="f-region">Hudud</label><select id="f-region"><option value="">Tanlang</option>${REGIONS.map(r => `<option ${f.region === r ? "selected" : ""}>${r}</option>`).join("")}</select></div>
+      <div class="field ${bad.address ? "bad" : ""}"><label for="f-address">Manzil</label><input id="f-address" autocomplete="street-address" value="${esc(f.address || "")}" placeholder="Tuman, ko‘cha, uy, mo‘ljal"></div>
+      <div class="field"><label>To‘lov usuli</label><div class="radios">${["Click", "Payme", "Karta o‘tkazma"].map(m => `<label><input type="radio" name="pay" value="${m}" ${(f.pay || "Click") === m ? "checked" : ""}>${m}</label>`).join("")}</div></div>
+      <div class="field"><label for="f-note">Izoh (ixtiyoriy)</label><textarea id="f-note" placeholder="Masalan: qo‘ng‘iroqdan oldin yozing">${esc(f.note || "")}</textarea></div>
+    </form>
+    <div class="panel sum" style="margin-top:18px">
+      <div><span>Tovarlar (${cartCount()} dona)</span><span class="num">${fmt(sub)}</span></div>
+      <div><span>Yetkazish${f.region ? "" : " (hududni tanlang)"}</span><span class="num">${f.region ? fmt(del) : "—"}</span></div>
+      <div class="tot"><span>Jami</span><span class="num">${fmt(tot)}</span></div>
+      <div class="pre"><span>Oldindan to‘lov (${Math.round(CONFIG.prepay * 100)}%)</span><span class="num">${fmt(pre)}</span></div>
+      <div class="muted" style="font-size:13px">Qolgan summa tovar qo‘lingizga yetganda to‘lanadi. Admin to‘lov rekvizitlarini yuboradi.</div>
+    </div>`;
+  const keep = () => { f.name = v.querySelector("#f-name").value; f.phone = v.querySelector("#f-phone").value; f.region = v.querySelector("#f-region").value; f.address = v.querySelector("#f-address").value; f.note = v.querySelector("#f-note").value; f.pay = (v.querySelector("input[name=pay]:checked") || {}).value || "Click"; };
+  v.querySelectorAll("input,textarea").forEach(el => el.addEventListener("change", keep));
+  v.querySelector("#f-region").onchange = () => { keep(); viewCheckout(v); };
+  v.querySelector("#co").onsubmit = e => { e.preventDefault(); keep(); submitOrder(); };
+  setBar(`Buyurtma berish · <span class="num">${fmt(tot)}</span>`, () => { keep(); submitOrder(); });
+}
+function normPhone(s) { const d = String(s).replace(/\D/g, ""); const n = d.startsWith("998") ? d.slice(3) : d; return n.length === 9 ? "+998 " + n.replace(/(\d{2})(\d{3})(\d{2})(\d{2})/, "$1 $2 $3 $4") : null; }
+function submitOrder() {
+  const f = state.form, bad = {};
+  if (!f.name || f.name.trim().length < 2) bad.name = 1;
+  const phone = normPhone(f.phone || ""); if (!phone) bad.phone = 1;
+  if (!f.region) bad.region = 1;
+  if (!f.address || f.address.trim().length < 5) bad.address = 1;
+  f.bad = bad;
+  if (Object.keys(bad).length) { haptic("error"); render(); toast("Belgilangan maydonlarni to‘ldiring"); return; }
+  const sub = cartSubtotal(), del = deliveryFee(f.region);
+  const order = {
+    v: 1,
+    i: state.cart.map(i => { const p = PRODUCTS.find(x => x.id === i.id); return { id: p.id, n: p.name.slice(0, 48), s: i.size, c: i.color, q: i.qty, p: priceOf(p) }; }),
+    cu: { n: f.name.trim().slice(0, 60), ph: phone, r: f.region, a: f.address.trim().slice(0, 200), pay: f.pay, note: (f.note || "").trim().slice(0, 200) },
+    sub, del, tot: sub + del, pre: Math.round((sub + del) * CONFIG.prepay / 1000) * 1000
+  };
+  const json = JSON.stringify(order);
+  if (json.length > 4000) { toast("Savat juda katta: 2 ta buyurtmaga bo‘ling"); return; }
+  state.lastOrder = order;
+  // sendData faqat bot klaviaturasidagi tugma orqali ochilganda ishlaydi
+  const canSend = TG && !(TG.initDataUnsafe && TG.initDataUnsafe.query_id);
+  if (canSend) {
+    try { state.cart = []; saveCart(); TG.sendData(json); return; } catch (e) { /* pastdagi zaxira yo‘lga o‘tadi */ }
+  }
+  state.cart = []; saveCart(); go("done");
+}
+function orderText(o) {
+  return `Buyurtma — ${CONFIG.storeName}\n` +
+    o.i.map((x, k) => `${k + 1}. ${x.n} [${x.id}]${x.s ? ", " + x.s : ""}${x.c ? ", " + x.c : ""} × ${x.q} = ${fmt(x.p * x.q)}`).join("\n") +
+    `\n\nTovarlar: ${fmt(o.sub)}\nYetkazish: ${fmt(o.del)}\nJami: ${fmt(o.tot)}\nOldindan to‘lov: ${fmt(o.pre)}\n\n${o.cu.n}, ${o.cu.ph}\n${o.cu.r}, ${o.cu.a}\nTo‘lov: ${o.cu.pay}${o.cu.note ? "\nIzoh: " + o.cu.note : ""}`;
+}
+function viewDone(v) {
+  const o = state.lastOrder; if (!o) return go("catalog");
+  const text = orderText(o);
+  v.innerHTML = `<div class="done"><div class="tick">${UI.tick}</div>
+    <h2 class="vt">Buyurtma tayyor</h2>
+    <p class="muted">Quyidagi matnni nusxalab, adminga yuboring: <b class="num">@${esc(CONFIG.adminUsername)}</b>.<br>Telegram bot orqali ochilganda bu qadam kerak bo‘lmaydi: buyurtma o‘zi yuboriladi.</p>
+    <pre class="order" id="otext">${esc(text)}</pre>
+    <button class="ghost" type="button" id="copyBtn" style="margin-top:12px">Matnni nusxalash</button></div>`;
+  v.querySelector("#copyBtn").onclick = () => copyText(text, v.querySelector("#otext"));
+  setBar("Katalogga qaytish", () => go("catalog"));
+}
+function copyText(text, el) {
+  const ok = () => toast("Nusxalandi");
+  const fallback = () => { const r = document.createRange(); r.selectNodeContents(el); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast("Matn belgilandi, nusxalang"); };
+  try { navigator.clipboard.writeText(text).then(ok, fallback); } catch (e) { fallback(); }
+}
+
+/* ---------- ADMIN: narx kalkulyatori (#admin) ---------- */
+const A = { cny: 38, g: 420, cat: "pijama", mult: 2.5, cur: "", usd: CONFIG.usd, rcny: CONFIG.cny, cargo: CONFIG.cargoUsdPerKg, name: "", sizes: "M, L, XL", colors: "", fabric: "" };
+function viewAdmin(v) {
+  const r = { ...CONFIG, usd: +A.usd || 0, cny: +A.rcny || 0, cargoUsdPerKg: +A.cargo || 0 };
+  const c = calc(+A.cny || 0, +A.g || 0, +A.mult || 0, r);
+  const cur = +A.cur || 0, curProfit = cur ? cur - c.landed : 0;
+  const pill = c.margin >= 0.55 ? ["good", "Sog‘lom marja"] : c.margin >= 0.45 ? ["low", "Marja past"] : ["loss", "Juda past"];
+  const rows = [["Tovar (CNY → so‘m)", c.goods], ["Kargo (" + (A.g || 0) + " g)", c.cargo], ["Agent komissiyasi " + Math.round(CONFIG.agentFee * 100) + "%", c.fee], ["Qadoqlash", c.packing], ["Brak buferi " + Math.round(CONFIG.buffer * 100) + "%", c.buffer]];
+  const cat = catOf(A.cat);
+  const id = (A.cat.slice(0, 2) + String(Date.now()).slice(-4));
+  const snippet = `{ id: "${id}", cat: "${A.cat}", name: "${(A.name || "Tovar nomi").replace(/"/g, "'")}", cny: ${+A.cny || 0}, weight: ${+A.g || 0}, sizes: [${A.sizes.split(",").map(s => s.trim()).filter(Boolean).map(s => `"${s}"`).join(", ")}], colors: [${A.colors.split(",").map(s => s.trim()).filter(Boolean).map(s => `"${s}"`).join(", ")}], fabric: "${(A.fabric || "").replace(/"/g, "'")}", tint: 1, img: "" },`;
+  v.innerHTML = `<h2 class="vt">Narx kalkulyatori</h2>
+    <div class="muted" style="font-size:13px">Faqat admin uchun. Hisob: (tovar + kargo + komissiya + qadoqlash) × ${1 + CONFIG.buffer} = tannarx; tannarx × koeffitsient = sotuv.</div>
+    <div class="panel" style="margin-top:14px"><div class="calc">
+      <div class="field"><label for="a-cny">Narx, CNY (¥)</label><input id="a-cny" inputmode="decimal" value="${esc(A.cny)}"></div>
+      <div class="field"><label for="a-g">Og‘irlik, g</label><input id="a-g" inputmode="numeric" value="${esc(A.g)}"></div>
+      <div class="field"><label for="a-cat">Kategoriya</label><select id="a-cat">${CATEGORIES.filter(x => x.id !== "all").map(x => `<option value="${x.id}" ${A.cat === x.id ? "selected" : ""}>${x.name}</option>`).join("")}</select></div>
+      <div class="field"><label for="a-mult">Koeffitsient ×</label><input id="a-mult" inputmode="decimal" value="${esc(A.mult)}"></div>
+      <div class="field wide"><label for="a-cur">Hozir qanchaga sotyapsiz? (ixtiyoriy, so‘m)</label><input id="a-cur" inputmode="numeric" value="${esc(A.cur)}" placeholder="masalan 110000"></div>
+    </div>
+    <div class="big"><span>Sotuv narxi</span><b class="num">${fmt(c.sale)}</b></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px"><span class="pill ${pill[0]}">${pill[1]}: ${Math.round(c.margin * 100)}%</span><span class="pill good">Foyda: <span class="num">${fmt(c.profit)}</span>/dona</span></div>
+    ${cur ? `<div class="sec note" style="border-left-color:${curProfit < 0 ? "var(--bad)" : "var(--ok)"}">Hozirgi narx ${fmt(cur)}: ${curProfit < 0 ? `har donada <b>${fmt(-curProfit)} zarar</b>` : `har donada ${fmt(curProfit)} foyda (marja ${Math.round(curProfit / cur * 100)}%)`}.</div>` : ""}
+    <div class="tblwrap" style="padding:0;margin-top:14px"><table><tbody>
+      ${rows.map(([k, val]) => `<tr><td>${k}</td><td style="text-align:right">${fmt(val)}</td></tr>`).join("")}
+      <tr><td><b>Tannarx (landed)</b></td><td style="text-align:right"><b>${fmt(c.landed)}</b></td></tr>
+    </tbody></table></div></div>
+
+    <div class="panel sec"><div class="lbl"><span>Kurslar (faqat shu hisob uchun)</span></div><div class="calc">
+      <div class="field"><label for="a-usd">1 USD, so‘m</label><input id="a-usd" inputmode="numeric" value="${esc(A.usd)}"></div>
+      <div class="field"><label for="a-rcny">1 CNY, so‘m</label><input id="a-rcny" inputmode="numeric" value="${esc(A.rcny)}"></div>
+      <div class="field"><label for="a-cargo">Kargo, $/kg</label><input id="a-cargo" inputmode="decimal" value="${esc(A.cargo)}"></div>
+    </div><div class="muted" style="font-size:12.5px;margin-top:8px">Doimiy o‘zgartirish uchun fayl boshidagi CONFIG’ni tahrirlang.</div></div>
+
+    <div class="panel sec"><div class="lbl"><span>Katalogga qo‘shish qatori</span></div><div class="calc">
+      <div class="field wide"><label for="a-name">Tovar nomi</label><input id="a-name" value="${esc(A.name)}" placeholder="Atlas pijama to‘plami"></div>
+      <div class="field"><label for="a-sizes">Razmerlar (vergul bilan)</label><input id="a-sizes" value="${esc(A.sizes)}"></div>
+      <div class="field"><label for="a-colors">Ranglar</label><input id="a-colors" value="${esc(A.colors)}" placeholder="Qora, Bej"></div>
+      <div class="field wide"><label for="a-fabric">Mato</label><input id="a-fabric" value="${esc(A.fabric)}" placeholder="Paxta 95%, elastan 5%"></div>
+    </div>
+    <code class="snip" id="snip">${esc(snippet)}</code>
+    <button class="ghost" type="button" id="snipBtn" style="margin-top:10px">Qatorni nusxalash</button>
+    <div class="muted" style="font-size:12.5px;margin-top:8px">Nusxani PRODUCTS ro‘yxatiga qo‘ying. Narx avtomatik hisoblanadi.</div></div>`;
+  const map = { "a-cny": "cny", "a-g": "g", "a-mult": "mult", "a-cur": "cur", "a-usd": "usd", "a-rcny": "rcny", "a-cargo": "cargo", "a-name": "name", "a-sizes": "sizes", "a-colors": "colors", "a-fabric": "fabric" };
+  Object.entries(map).forEach(([elId, key]) => { const el = v.querySelector("#" + elId); el.onchange = () => { A[key] = el.value.replace(",", key.match(/name|sizes|colors|fabric/) ? "," : "."); viewAdmin(v); }; });
+  v.querySelector("#a-cat").onchange = e => { A.cat = e.target.value; const k = catOf(A.cat); A.mult = k.mult; A.g = k.weight; viewAdmin(v); };
+  v.querySelector("#snipBtn").onclick = () => copyText(snippet, v.querySelector("#snip"));
+  setBar("", null);
+}
+
+/* ---------- start ---------- */
+if (location.hash === "#admin") state.view = "admin";
+window.addEventListener("hashchange", () => { if (location.hash === "#admin") go("admin"); });
+render();
+</script>
