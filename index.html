@@ -221,6 +221,7 @@ const CONFIG = {
 /* 2) KATEGORIYALAR — kalkulyator uchun standart og‘irlik (g) va ustama koeffitsienti */
 const CATEGORIES = [
   { id: "all", name: "Hammasi" },
+  { id: "new", name: "Yangi" },
   { id: "pop", name: "Ko‘p so‘ralgan" },
   { id: "oyoq", name: "Oyoq kiyim", mult: 2.3, weight: 600, chart: "oyoq", icon: "slipper" },
   { id: "bolalar", name: "Bolalar", mult: 2.5, weight: 300, chart: "bolalar", icon: "shirt" },
@@ -241,7 +242,9 @@ const SIZE_CHARTS = {
 
 /* 4) KATALOG — products.json faylidan yuklanadi (kanal e’lonlaridan yig‘ilgan).
       Har tovar: id, cat, name, price (so‘m), img (Telegram file_id ro‘yxati),
-      sizes (bo‘lsa), ask=1 (razmer/rangni mijoz yozadi), pop=1 (ko‘p so‘ralgan), d (sana). */
+      sizes (bo‘lsa), ask=1 (razmer/rangni mijoz yozadi), pop=1 (ko‘p so‘ralgan), d (sana).
+      Bot orqali qo‘shilgan tovarlar (/api/products, new=1) ro‘yxat boshiga qo‘shiladi;
+      admin /del bilan yashirgan eski tovarlar ("hidden") ko‘rsatilmaydi. */
 let PRODUCTS = [];
 const IMG = id => "/api/img?f=" + encodeURIComponent(id);
 
@@ -344,16 +347,16 @@ function render() {
 /* ---------- KATALOG ---------- */
 function viewCatalog(v) {
   const q = state.q.trim().toLowerCase();
-  const all = PRODUCTS.filter(p => (state.cat === "all" || (state.cat === "pop" ? p.pop : p.cat === state.cat)) && (!q || p.name.toLowerCase().includes(q) || (catOf(p.cat).name || "").toLowerCase().includes(q)));
+  const all = PRODUCTS.filter(p => (state.cat === "all" || (state.cat === "pop" ? p.pop : state.cat === "new" ? p.new : p.cat === state.cat)) && (!q || p.name.toLowerCase().includes(q) || (catOf(p.cat).name || "").toLowerCase().includes(q)));
   const list = all.slice(0, state.shown);
   v.innerHTML = `
     <div class="search">${UI.search}<input id="q" type="search" placeholder="Qidirish: pijama, sumka…" value="${esc(state.q)}" aria-label="Qidirish"></div>
-    <div class="chips" role="group" aria-label="Kategoriyalar">${CATEGORIES.map(c => `<button class="chip" type="button" data-cat="${c.id}" aria-pressed="${state.cat === c.id}">${esc(c.name)}</button>`).join("")}</div>
+    <div class="chips" role="group" aria-label="Kategoriyalar">${CATEGORIES.filter(c => c.id !== "new" || PRODUCTS.some(p => p.new)).map(c => `<button class="chip" type="button" data-cat="${c.id}" aria-pressed="${state.cat === c.id}">${esc(c.name)}</button>`).join("")}</div>
     <div class="terms"><span><i></i>Xitoydan ${esc(CONFIG.leadTime)}</span><span><i></i>${Math.round(CONFIG.prepay * 100)}% oldindan to‘lov</span><span><i></i>Butun O‘zbekiston bo‘ylab</span></div>
     ${CONFIG.demo ? `<div class="demo">Namuna katalog: tovarlar va narxlar sinov uchun.</div>` : ""}
     ${list.length ? `<div class="grid">${list.map(p => `
       <button class="card" type="button" data-id="${p.id}">
-        ${photo(p, p.stock ? `<span class="badge ready">Tayyor</span>` : p.pop ? `<span class="badge hot">Ko‘p so‘ralgan</span>` : "")}
+        ${photo(p, p.stock ? `<span class="badge ready">Tayyor</span>` : p.new ? `<span class="badge hot">Yangi</span>` : p.pop ? `<span class="badge hot">Ko‘p so‘ralgan</span>` : "")}
         <span class="nm">${esc(p.name)}</span>
         <span class="pr num">${fmt(priceOf(p))}</span>
       </button>`).join("")}</div>
@@ -582,9 +585,16 @@ function viewAdmin(v) {
 if (location.hash === "#admin") state.view = "admin";
 window.addEventListener("hashchange", () => { if (location.hash === "#admin") go("admin"); });
 render();
+const extra = fetch("/api/products").then(r => r.ok ? r.json() : null).catch(() => null);
 fetch("products.json", { cache: "no-cache" })
   .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
-  .then(list => { PRODUCTS = Array.isArray(list) ? list : []; state.cart = loadCart(); })
+  .then(list => extra.then(x => {
+    const base = Array.isArray(list) ? list : [];
+    const added = x && Array.isArray(x.items) ? x.items.filter(p => p && p.id && p.price && Array.isArray(p.img)) : [];
+    const hidden = new Set([...(x && Array.isArray(x.hidden) ? x.hidden : []), ...added.map(p => p.id)]);
+    PRODUCTS = added.concat(base.filter(p => !hidden.has(p.id)));
+    state.cart = loadCart();
+  }))
   .catch(() => { state.loadErr = true; })
   .finally(() => { state.loading = false; if (state.view === "catalog" || state.view === "cart") render(); });
 </script>
